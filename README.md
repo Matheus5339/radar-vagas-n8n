@@ -105,3 +105,5 @@ problema (a minha rotina de busca), os critérios de faixa e as regras de custo 
 segurança; a IA gerou boa parte do código.
 
 Matheus de Oliveira Pereira · [github.com/Matheus5339](https://github.com/Matheus5339)
+
+Licença: [MIT](LICENSE).
