@@ -4,7 +4,7 @@ Automação em **n8n** que lê os e-mails diários de vagas de estágio/júnior,
 **classifica cada vaga com IA (Gemini)** em faixas de chance e grava tudo numa
 **planilha Google que funciona como dashboard**.
 
-**Dashboard (somente leitura):** _(link da planilha)_
+**Dashboard (somente leitura):** [planilha "Radar de vagas"](https://docs.google.com/spreadsheets/d/102bghG5QpQbgYsi6ce14hVn-DLDwkXXaHup58c3ZG7A/edit?usp=sharing) (aba `Resumo` com o gráfico por faixa; aba `Vagas` com o motivo de cada classificação)
 
 ## O problema
 
