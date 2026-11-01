@@ -12,14 +12,29 @@ Eu recebo duas vezes por dia um e-mail "Vagas Estágio/Jr" com vagas novas
 (título, empresa, local e link). Para cada uma eu precisava abrir o link, ler os
 requisitos, comparar com o meu perfil e decidir se valia a pena (Faixa 1, 2 ou 3).
 
-## Tempo economizado (medido)
+## Tempo economizado (medido em 01/11/2026)
 
-| | Tempo |
-|---|---|
-| Classificação manual de _N_ vagas (cronometrada) | _a medir_ |
-| Execução do workflow para as mesmas vagas (tempo registrado pelo n8n) | _a medir_ |
+| | Vagas | Tempo |
+|---|---|---|
+| Triagem manual (eu, cronometrado: abrir cada link, ler, decidir a faixa, anotar) | 6 | **5 min 45 s** (~58 s por vaga) |
+| Workflow, 1ª versão (todas as vagas passavam pelo Gemini) | 6 | 1 min 17 s (72 s são a pausa obrigatória entre chamadas do plano gratuito) |
+| Workflow, versão atual (vaga encerrada não passa pela IA) | 8 | **7,1 s** |
 
-_Os números só entram aqui depois de medidos de verdade._
+Tempos do workflow registrados pelo próprio n8n (aba *Executions*). Com o agendamento,
+o meu tempo de atenção cai para o de abrir a planilha.
+
+Ressalvas honestas:
+- Amostra pequena (um dia de e-mails).
+- Todas as vagas medidas já estavam encerradas, então o tempo manual é o **melhor caso**:
+  eu só abri o link e vi "vaga encerrada". Com vagas abertas, ler os requisitos leva
+  mais tempo, e o workflow passa a gastar ~13 s por vaga no Gemini.
+- A 2ª execução pegou um e-mail novo e o mais antigo saiu da janela
+  de 2 dias (8 vagas), por isso não é exatamente o mesmo conjunto da 1ª.
+
+**O que a medição revelou:** na 1ª versão, 5 das 6 vagas estavam fora do ar
+(HTTP 404/410) e a IA, sem texto, deu Faixa 1 ou 2 pelo título. Isso virou um teste
+de regressão e uma regra sem IA (ver Decisões). Na versão atual, as 8 vagas foram
+marcadas como `encerrada` com o código HTTP como motivo, sem nenhuma chamada ao Gemini.
 
 ## Fluxo
 
