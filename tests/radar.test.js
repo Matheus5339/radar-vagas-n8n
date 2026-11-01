@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { extrairVagas, desembrulharLink } = require('../src/extrair_vagas');
-const { htmlParaTexto, montarPedido, lerResposta } = require('../src/classificar');
+const { htmlParaTexto, montarPedido, lerResposta, vagaEncerrada } = require('../src/classificar');
 
 // Cópia do formato real de um e-mail da rotina (31/10/2026).
 const EMAIL = `— Não confirmadas (confira antes) —
@@ -65,4 +65,28 @@ test('lê resposta JSON do Gemini e trata resposta quebrada', () => {
   assert.strictEqual(lerResposta({}).faixa, 'erro');
   const ruim = { candidates: [{ content: { parts: [{ text: '{"faixa":"7"}' }] } }] };
   assert.strictEqual(lerResposta(ruim).faixa, 'erro');
+});
+
+// Regressão (execução real de 01/11/2026): 5 das 6 vagas estavam fora do ar (HTTP 404/410),
+// o fluxo mandava "página indisponível" para a IA e ela chutava Faixa 1 ou 2 pelo título.
+test('vaga fora do ar (404/410) é marcada como encerrada, sem IA', () => {
+  assert.match(vagaEncerrada({ error: { message: '410 - "<!DOCTYPE html>..."' } }), /410/);
+  assert.match(vagaEncerrada({ error: { message: '404 - "<!DOCTYPE html>..."' } }), /404/);
+});
+
+test('página que diz que o processo acabou é marcada como encerrada', () => {
+  const paginas = [
+    '<h1>Processo seletivo encerrado</h1><p>O processo seletivo da Infosimples foi encerrado.</p>',
+    'This job listing does not exist anymore, sorry!',
+    'This job listing is archived, sorry!',
+    'Esta vaga não está mais disponível',
+  ];
+  for (const html of paginas) assert.ok(vagaEncerrada({ data: html }), html);
+});
+
+test('vaga aberta, site bloqueado ou fora do ar temporário não viram "encerrada"', () => {
+  assert.strictEqual(vagaEncerrada({ data: '<h1>Estágio Python</h1><p>Requisitos: SQL</p>' }), null);
+  assert.strictEqual(vagaEncerrada({ error: { message: '403 - Forbidden' } }), null);
+  assert.strictEqual(vagaEncerrada({ error: { message: 'timeout of 15000ms exceeded' } }), null);
+  assert.strictEqual(vagaEncerrada({}), null);
 });

@@ -79,4 +79,24 @@ function lerResposta(resposta) {
   }
 }
 
-module.exports = { htmlParaTexto, montarPedido, lerResposta, SCHEMA, PERFIL, REGRAS };
+// Vaga que já acabou não vai para a IA: sem texto, ela só chutava a faixa pelo título.
+// Só 404/410 contam; 403 (site que bloqueia robô) e timeout podem ser vaga aberta.
+const TEXTOS_ENCERRADA = [
+  /processo seletivo (foi )?encerrado/i,
+  /vaga (foi )?encerrada/i,
+  /n[ãa]o est[áa] mais dispon[íi]vel/i,
+  /does not exist anymore/i,
+  /listing is archived/i,
+  /no longer (available|accepting)/i,
+];
+
+function vagaEncerrada(saidaHttp) {
+  const erro = saidaHttp && saidaHttp.error && String(saidaHttp.error.message || '');
+  const status = erro && erro.match(/^(404|410)\b/);
+  if (status) return `página da vaga não existe mais (HTTP ${status[1]})`;
+  const texto = htmlParaTexto(saidaHttp && saidaHttp.data, 20000);
+  const achou = TEXTOS_ENCERRADA.find((re) => re.test(texto));
+  return achou ? `a página diz que a vaga acabou ("${texto.match(achou)[0]}")` : null;
+}
+
+module.exports = { htmlParaTexto, montarPedido, lerResposta, vagaEncerrada, SCHEMA, PERFIL, REGRAS };

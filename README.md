@@ -28,13 +28,14 @@ Gatilho (manual ou 8h30/14h30)
   → Gmail: e-mails "Vagas Estágio/Jr" dos últimos 2 dias
   → Code: extrai título, empresa, local e link de cada vaga (sem repetir link)
   → HTTP: abre a página da vaga (se o site bloquear, segue só com o título)
-  → Code: limpa o HTML e monta o pedido (perfil + regras + texto da vaga)
+  → Code: página 404/410 ou com "processo encerrado"? → faixa "encerrada", sem IA
+          senão limpa o HTML e monta o pedido (perfil + regras + texto da vaga)
   → HTTP: Gemini com saída em JSON (schema), 1 chamada a cada 13 s
   → Code: valida a resposta
   → Google Sheets: grava ou atualiza a linha da vaga (chave = link)
 ```
 
-Saída por vaga: `faixa` (1, 2, 3 ou fora), `nivel`, `remoto`, `motivo` (até 25 palavras),
+Saída por vaga: `faixa` (1, 2, 3, fora ou encerrada), `nivel`, `remoto`, `motivo` (até 25 palavras),
 `confianca` (baixa quando a página não abriu).
 
 ## Decisões
@@ -45,6 +46,11 @@ Saída por vaga: `faixa` (1, 2, 3 ou fora), `nivel`, `remoto`, `motivo` (até 25
 - **Perfil explícito no prompt, inclusive o que eu NÃO sei**, para a IA não supor.
 - **Saída em JSON com schema** (`responseSchema`) e validação no nó seguinte: se a
   resposta vier quebrada, a vaga fica com faixa `erro` em vez de travar o fluxo.
+- **Vaga encerrada é detectada por regra, não pela IA.** Na primeira execução real,
+  5 de 6 vagas estavam fora do ar (HTTP 404/410); sem texto, a IA classificava pelo
+  título e dava Faixa 1 ou 2. Agora 404/410 ou frases como "processo seletivo
+  encerrado" marcam a vaga como `encerrada` sem chamar o Gemini (teste de regressão
+  em `tests/`). 403 e timeout não contam: podem ser site que bloqueia robô.
 - **Texto da vaga tratado como dado** (proteção contra prompt injection em anúncios).
 - **Código dos nós Code testado fora do n8n:** a lógica fica em `src/`, com testes
   em `tests/` (`npm test`); `npm run workflow` gera o `workflow/radar-vagas.json`

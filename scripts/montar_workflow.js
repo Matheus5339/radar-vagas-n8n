@@ -31,14 +31,13 @@ return saida;`;
 const codigoPedido = `${fonte('classificar.js')}
 
 const vaga = $('Extrair vagas').item.json;
+const encerrada = vagaEncerrada($json);
+if (encerrada) return { json: { vaga, encerrada: true, motivo: encerrada } };
 const html = typeof $json.data === 'string' ? $json.data : '';
-return { json: { vaga, pedido: montarPedido(vaga, htmlParaTexto(html)) } };`;
+return { json: { vaga, encerrada: false, pedido: montarPedido(vaga, htmlParaTexto(html)) } };`;
 
-const codigoLer = `${fonte('classificar.js')}
-
-const { vaga } = $('Montar pedido').item.json;
-const r = lerResposta($json);
-return {
+// Linha da planilha: igual para vaga classificada pela IA e vaga encerrada.
+const LINHA = `return {
   json: {
     link: vaga.link,
     titulo: vaga.titulo,
@@ -54,6 +53,16 @@ return {
     classificado_em: new Date().toISOString(),
   },
 };`;
+
+const codigoLer = `${fonte('classificar.js')}
+
+const { vaga } = $('Montar pedido').item.json;
+const r = lerResposta($json);
+${LINHA}`;
+
+const codigoEncerrada = `const { vaga, motivo } = $json;
+const r = { faixa: 'encerrada', nivel: '', remoto: '', motivo, confianca: 'alta' };
+${LINHA}`;
 
 const no = (nome, tipo, versao, posicao, parametros, extra = {}) => ({
   id: nome.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
@@ -86,7 +95,21 @@ const nodes = [
     },
   }, { onError: 'continueRegularOutput' }),
   no('Montar pedido', 'n8n-nodes-base.code', 2, [960, 100], { mode: 'runOnceForEachItem', jsCode: codigoPedido }),
-  no('Classificar com Gemini', 'n8n-nodes-base.httpRequest', 4.2, [1200, 100], {
+  no('Vaga encerrada?', 'n8n-nodes-base.if', 2.2, [1200, 100], {
+    conditions: {
+      options: { caseSensitive: true, leftValue: '', typeValidation: 'strict', version: 2 },
+      conditions: [{
+        id: 'encerrada',
+        leftValue: '={{ $json.encerrada }}',
+        rightValue: '',
+        operator: { type: 'boolean', operation: 'true', singleValue: true },
+      }],
+      combinator: 'and',
+    },
+    options: {},
+  }),
+  no('Marcar encerrada', 'n8n-nodes-base.code', 2, [1440, -100], { mode: 'runOnceForEachItem', jsCode: codigoEncerrada }),
+  no('Classificar com Gemini', 'n8n-nodes-base.httpRequest', 4.2, [1440, 200], {
     method: 'POST',
     url: `https://generativelanguage.googleapis.com/v1beta/models/${MODELO}:generateContent`,
     authentication: 'genericCredentialType',
@@ -96,8 +119,8 @@ const nodes = [
     jsonBody: '={{ JSON.stringify($json.pedido) }}',
     options: { batching: { batch: { batchSize: 1, batchInterval: INTERVALO_MS } } },
   }, { retryOnFail: true, maxTries: 3, waitBetweenTries: 5000, onError: 'continueRegularOutput' }),
-  no('Ler resposta', 'n8n-nodes-base.code', 2, [1440, 100], { mode: 'runOnceForEachItem', jsCode: codigoLer }),
-  no('Gravar na planilha', 'n8n-nodes-base.googleSheets', 4.5, [1680, 100], {
+  no('Ler resposta', 'n8n-nodes-base.code', 2, [1680, 200], { mode: 'runOnceForEachItem', jsCode: codigoLer }),
+  no('Gravar na planilha', 'n8n-nodes-base.googleSheets', 4.5, [1920, 100], {
     operation: 'appendOrUpdate',
     documentId: { __rl: true, mode: 'url', value: '' },
     sheetName: { __rl: true, mode: 'name', value: 'Vagas' },
@@ -118,7 +141,12 @@ const connections = Object.assign(
   liga('Buscar e-mails de vagas', 'Extrair vagas'),
   liga('Extrair vagas', 'Abrir página da vaga'),
   liga('Abrir página da vaga', 'Montar pedido'),
-  liga('Montar pedido', 'Classificar com Gemini'),
+  liga('Montar pedido', 'Vaga encerrada?'),
+  { 'Vaga encerrada?': { main: [
+    [{ node: 'Marcar encerrada', type: 'main', index: 0 }],
+    [{ node: 'Classificar com Gemini', type: 'main', index: 0 }],
+  ] } },
+  liga('Marcar encerrada', 'Gravar na planilha'),
   liga('Classificar com Gemini', 'Ler resposta'),
   liga('Ler resposta', 'Gravar na planilha'),
 );
