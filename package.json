@@ -1,0 +1,9 @@
+{
+  "name": "radar-vagas-n8n",
+  "private": true,
+  "description": "Automação n8n que lê e-mails de vagas, classifica com Gemini e grava no Google Sheets",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "workflow": "node scripts/montar_workflow.js"
+  }
+}

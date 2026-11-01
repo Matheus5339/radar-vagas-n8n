@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Testes (node --test)
+        run: npm test
+      # Garante que o workflow versionado foi gerado a partir do código atual de src/.
+      - name: Workflow em dia com src/
+        run: npm run workflow && git diff --exit-code workflow/
